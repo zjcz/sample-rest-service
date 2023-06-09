@@ -6,13 +6,14 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import dev.jonclarke.samplerestservice.dataaccess.ToDoItemRepository;
 import dev.jonclarke.samplerestservice.models.ToDoItem;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.context.annotation.Bean;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 @SpringBootApplication
-public class SampleRestServiceApplication {
+public class SampleRestServiceApplication extends SpringBootServletInitializer {
 
 	public static void main(String[] args) {
 		SpringApplication.run(SampleRestServiceApplication.class, args);
