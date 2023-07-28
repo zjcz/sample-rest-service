@@ -1,6 +1,7 @@
 package dev.jonclarke.samplerestservice.models;
 
 
+import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -12,6 +13,8 @@ import java.util.Objects;
 /**
  * To Do item entity object.
  */
+
+@JacksonXmlRootElement(localName="ToDoItem")
 @Entity
 public class ToDoItem {
     @Id

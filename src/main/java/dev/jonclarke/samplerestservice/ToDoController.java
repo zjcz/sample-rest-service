@@ -2,6 +2,7 @@ package dev.jonclarke.samplerestservice;
 
 import dev.jonclarke.samplerestservice.dataaccess.ToDoItemRepository;
 import dev.jonclarke.samplerestservice.models.ToDoItem;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,24 +25,28 @@ public class ToDoController {
         this.repository = repository;
     }
 
-    @GetMapping("/todo")
+    @GetMapping(value = "/todo", produces = { MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE })
     public List<ToDoItem> getAllToDoItems() {
         return repository.findAll();
     }
 
-    @GetMapping("/todo/{id}")
+    @GetMapping(value = "/todo/{id}", produces = { MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE })
     ToDoItem getSingleToDoItem(@PathVariable Integer id) {
 
         return repository.findById(id)
                 .orElseThrow(() -> new ToDoItemNotFoundException(id));
     }
 
-    @PostMapping("/todo")
+    @PostMapping(value = "/todo",
+            consumes = { MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE },
+            produces = { MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE })
     ToDoItem newToDoItem(@RequestBody ToDoItem newItem) {
         return repository.save(newItem);
     }
 
-    @PutMapping("/todo/{id}")
+    @PutMapping(value = "/todo/{id}",
+            consumes = { MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE },
+            produces = { MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE })
     ToDoItem updateToDoItem(@RequestBody ToDoItem newToDoItem, @PathVariable Integer id) {
 
         return repository.findById(id)
@@ -55,7 +60,7 @@ public class ToDoController {
                 .orElseThrow(() -> new ToDoItemNotFoundException(id));
     }
 
-    @DeleteMapping("/todo/{id}")
+    @DeleteMapping(value = "/todo/{id}", produces = { MediaType.APPLICATION_JSON_VALUE, MediaType.APPLICATION_XML_VALUE })
     void deleteToDoItem(@PathVariable Integer id) {
         if (repository.findById(id).isEmpty()) {
             throw new ToDoItemNotFoundException(id);
