@@ -10,8 +10,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import dev.jonclarke.samplerestservice.dataaccess.ToDoItemRepository;
-import dev.jonclarke.samplerestservice.models.ToDoItem;
+import dev.jonclarke.samplerestservice.dataaccess.MovieRepository;
+import dev.jonclarke.samplerestservice.models.MovieDataModel;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -28,21 +28,21 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Unit Tests for the ToDoController.
+ * Unit Tests for the MovieController.
  * Tests cover all methods available in the controller
  * Tests cover using all methods with json and xml
  */
-@WebMvcTest(ToDoController.class)
-public class ToDoControllerTest {
+@WebMvcTest(MovieController.class)
+public class MovieControllerTest {
     @Autowired
     private MockMvc mockMvc;
     @Autowired
     ObjectMapper jsonMapper;
     XmlMapper xmlMapper;
     @MockBean
-    private ToDoItemRepository repository;
+    private MovieRepository repository;
 
-    public ToDoControllerTest() {
+    public MovieControllerTest() {
         // We can't autowire the xmlMapper, so we have to create it manually
         xmlMapper = new XmlMapper();
         xmlMapper.registerModule(new JavaTimeModule());
@@ -57,7 +57,7 @@ public class ToDoControllerTest {
     public void listAll_EmptyDataSet_ExpectEmptyJsonObject() throws Exception {
         when(repository.findAll()).thenReturn(Collections.emptyList());
 
-        mockMvc.perform(get("/todo"))
+        mockMvc.perform(get("/movies"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(content().json("[]"));
@@ -66,7 +66,7 @@ public class ToDoControllerTest {
     public void listAllAsXml_EmptyDataSet_ExpectEmptyXmlObject() throws Exception {
         when(repository.findAll()).thenReturn(Collections.emptyList());
 
-        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.get("/todo")
+        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.get("/movies")
                 .contentType(MediaType.APPLICATION_XML)
                 .accept(MediaType.APPLICATION_XML);
 
@@ -78,28 +78,28 @@ public class ToDoControllerTest {
 
     @Test
     public void listAll_DataSetContainsOneItem_ExpectDataInJsonObject() throws Exception {
-        ToDoItem item = buildToDoItem(123, "test item", "test description", LocalDateTime.now(), false);
-        List<ToDoItem> items = List.of(item);
+        MovieDataModel item = buildMovie(123, "test title", "test description", LocalDateTime.now(), false);
+        List<MovieDataModel> items = List.of(item);
         when(repository.findAll()).thenReturn(items);
 
-        this.mockMvc.perform(get("/todo"))
+        this.mockMvc.perform(get("/movies"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].id", is(item.getId())))
-                .andExpect(jsonPath("$[0].name", is(item.getName())))
+                .andExpect(jsonPath("$[0].title", is(item.getTitle())))
                 .andExpect(jsonPath("$[0].description", is(item.getDescription())))
-                .andExpect(jsonPath("$[0].dueDate", is(formatDateTimeForComparison(item.getDueDate()))))
-                .andExpect(jsonPath("$[0].completed", is(item.getCompleted())));
+                .andExpect(jsonPath("$[0].releaseDate", is(formatDateTimeForComparison(item.getReleaseDate()))))
+                .andExpect(jsonPath("$[0].availableOnDvd", is(item.isAvailableOnDvd())));
     }
 
     @Test
     public void listAllAsXml_DataSetContainsOneItem_ExpectDataInXmlObject() throws Exception {
-        ToDoItem item = buildToDoItem(123, "test item", "test description", LocalDateTime.now(), false);
-        List<ToDoItem> items = List.of(item);
+        MovieDataModel item = buildMovie(123, "test title", "test description", LocalDateTime.now(), false);
+        List<MovieDataModel> items = List.of(item);
         when(repository.findAll()).thenReturn(items);
 
-        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.get("/todo")
+        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.get("/movies")
                 .contentType(MediaType.APPLICATION_XML)
                 .accept(MediaType.APPLICATION_XML);
 
@@ -108,10 +108,10 @@ public class ToDoControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_XML))
                 .andExpect(xpath("/List/*").nodeCount(is(1)))
                 .andExpect(xpath("/List/item[1]/id").string(is("" + item.getId())))
-                .andExpect(xpath("/List/item[1]/name").string(is(item.getName())))
+                .andExpect(xpath("/List/item[1]/title").string(is(item.getTitle())))
                 .andExpect(xpath("/List/item[1]/description").string(is(item.getDescription())))
-                .andExpect(xpath("/List/item[1]/dueDate").string(is(formatDateTimeForComparison(item.getDueDate()))))
-                .andExpect(xpath("/List/item[1]/completed").string(is(item.getCompleted().toString())));
+                .andExpect(xpath("/List/item[1]/releaseDate").string(is(formatDateTimeForComparison(item.getReleaseDate()))))
+                .andExpect(xpath("/List/item[1]/availableOnDvd").string(is(item.isAvailableOnDvd().toString())));
     }
 
     //******************************************************************
@@ -120,27 +120,27 @@ public class ToDoControllerTest {
 
     @Test
     public void getOne_RequestAnItemById_ExpectDataInJsonObject() throws Exception {
-        ToDoItem itemToReturn = buildToDoItem(456, "test item", "test description", LocalDateTime.now(), false);
+        MovieDataModel itemToReturn = buildMovie(456, "test title", "test description", LocalDateTime.now(), false);
 
         when(repository.findById(itemToReturn.getId())).thenReturn(Optional.of(itemToReturn));
 
-        this.mockMvc.perform(get("/todo/" + itemToReturn.getId()))
+        this.mockMvc.perform(get("/movies/" + itemToReturn.getId()))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$", notNullValue()))
                 .andExpect(jsonPath("$.id", is(itemToReturn.getId())))
-                .andExpect(jsonPath("$.name", is(itemToReturn.getName())))
+                .andExpect(jsonPath("$.title", is(itemToReturn.getTitle())))
                 .andExpect(jsonPath("$.description", is(itemToReturn.getDescription())))
-                .andExpect(jsonPath("$.dueDate", is(formatDateTimeForComparison(itemToReturn.getDueDate()))))
-                .andExpect(jsonPath("$.completed", is(itemToReturn.getCompleted())));
+                .andExpect(jsonPath("$.releaseDate", is(formatDateTimeForComparison(itemToReturn.getReleaseDate()))))
+                .andExpect(jsonPath("$.availableOnDvd", is(itemToReturn.isAvailableOnDvd())));
     }
 
     @Test
     public void getOneAsXml_RequestAnItemById_ExpectDataInXmlObject() throws Exception {
-        ToDoItem itemToReturn = buildToDoItem(456, "test item", "test description", LocalDateTime.now(), false);
+        MovieDataModel itemToReturn = buildMovie(456, "test title", "test description", LocalDateTime.now(), false);
         when(repository.findById(itemToReturn.getId())).thenReturn(Optional.of(itemToReturn));
 
-        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.get("/todo/" + itemToReturn.getId())
+        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.get("/movies/" + itemToReturn.getId())
                 .contentType(MediaType.APPLICATION_XML)
                 .accept(MediaType.APPLICATION_XML);
 
@@ -148,18 +148,18 @@ public class ToDoControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_XML))
                 .andExpect(xpath("/*").nodeCount(is(1)))
-                .andExpect(xpath("/ToDoItem[1]/id").string(is("" + itemToReturn.getId())))
-                .andExpect(xpath("/ToDoItem[1]/name").string(is(itemToReturn.getName())))
-                .andExpect(xpath("/ToDoItem[1]/description").string(is(itemToReturn.getDescription())))
-                .andExpect(xpath("/ToDoItem[1]/dueDate").string(is(formatDateTimeForComparison(itemToReturn.getDueDate()))))
-                .andExpect(xpath("/ToDoItem[1]/completed").string(is(itemToReturn.getCompleted().toString())));
+                .andExpect(xpath("/Movie[1]/id").string(is("" + itemToReturn.getId())))
+                .andExpect(xpath("/Movie[1]/title").string(is(itemToReturn.getTitle())))
+                .andExpect(xpath("/Movie[1]/description").string(is(itemToReturn.getDescription())))
+                .andExpect(xpath("/Movie[1]/releaseDate").string(is(formatDateTimeForComparison(itemToReturn.getReleaseDate()))))
+                .andExpect(xpath("/Movie[1]/availableOnDvd").string(is(itemToReturn.isAvailableOnDvd().toString())));
     }
 
     @Test
     public void getOne_RequestAnInvalidItem_Expect404Error() throws Exception {
         when(repository.findById(123)).thenReturn(Optional.empty());
 
-        this.mockMvc.perform(get("/todo/123"))
+        this.mockMvc.perform(get("/movies/123"))
                 .andExpect(status().isNotFound());
     }
 
@@ -169,11 +169,11 @@ public class ToDoControllerTest {
 
     @Test
     public void add_SaveValidItem_ExpectSuccess() throws Exception {
-        ToDoItem itemToSave = buildToDoItem(123, "test item", "test description", LocalDateTime.now(), false);
+        MovieDataModel itemToSave = buildMovie(123, "test title", "test description", LocalDateTime.now(), false);
 
         when(repository.save(itemToSave)).thenReturn(itemToSave);
 
-        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.post("/todo")
+        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.post("/movies")
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON)
                 .content(this.jsonMapper.writeValueAsString(itemToSave));
@@ -183,15 +183,15 @@ public class ToDoControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$", notNullValue()))
                 .andExpect(jsonPath("$.id", is(itemToSave.getId())))
-                .andExpect(jsonPath("$.name", is(itemToSave.getName())))
+                .andExpect(jsonPath("$.title", is(itemToSave.getTitle())))
                 .andExpect(jsonPath("$.description", is(itemToSave.getDescription())))
-                .andExpect(jsonPath("$.dueDate", is(formatDateTimeForComparison(itemToSave.getDueDate()))))
-                .andExpect(jsonPath("$.completed", is(itemToSave.getCompleted())));
+                .andExpect(jsonPath("$.releaseDate", is(formatDateTimeForComparison(itemToSave.getReleaseDate()))))
+                .andExpect(jsonPath("$.availableOnDvd", is(itemToSave.isAvailableOnDvd())));
     }
 
     @Test
     public void add_PassInvalidItem_ExpectFailure() throws Exception {
-        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.post("/todo")
+        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.post("/movies")
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON)
                 .content("INVALID");
@@ -202,11 +202,11 @@ public class ToDoControllerTest {
 
     @Test
     public void addAsXml_SaveValidItem_ExpectSuccess() throws Exception {
-        ToDoItem itemToSave = buildToDoItem(123, "test item", "test description", LocalDateTime.now(), false);
+        MovieDataModel itemToSave = buildMovie(123, "test title", "test description", LocalDateTime.now(), false);
 
         when(repository.save(itemToSave)).thenReturn(itemToSave);
 
-        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.post("/todo")
+        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.post("/movies")
                 .contentType(MediaType.APPLICATION_XML)
                 .accept(MediaType.APPLICATION_XML)
                 .content(this.xmlMapper.writeValueAsString(itemToSave));
@@ -215,11 +215,11 @@ public class ToDoControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_XML))
                 .andExpect(xpath("/*").nodeCount(is(1)))
-                .andExpect(xpath("/ToDoItem[1]/id").string(is("" + itemToSave.getId())))
-                .andExpect(xpath("/ToDoItem[1]/name").string(is(itemToSave.getName())))
-                .andExpect(xpath("/ToDoItem[1]/description").string(is(itemToSave.getDescription())))
-                .andExpect(xpath("/ToDoItem[1]/dueDate").string(is(formatDateTimeForComparison(itemToSave.getDueDate()))))
-                .andExpect(xpath("/ToDoItem[1]/completed").string(is(itemToSave.getCompleted().toString())));
+                .andExpect(xpath("/Movie[1]/id").string(is("" + itemToSave.getId())))
+                .andExpect(xpath("/Movie[1]/title").string(is(itemToSave.getTitle())))
+                .andExpect(xpath("/Movie[1]/description").string(is(itemToSave.getDescription())))
+                .andExpect(xpath("/Movie[1]/releaseDate").string(is(formatDateTimeForComparison(itemToSave.getReleaseDate()))))
+                .andExpect(xpath("/Movie[1]/availableOnDvd").string(is(itemToSave.isAvailableOnDvd().toString())));
     }
 
     //******************************************************************
@@ -228,13 +228,13 @@ public class ToDoControllerTest {
 
     @Test
     public void update_SaveValidItem_ExpectSuccess() throws Exception {
-        ToDoItem originalItem = buildToDoItem(123, "test item", "test description", LocalDateTime.now(), false);
-        ToDoItem itemToSave = buildToDoItem(123, "new item", "new description", LocalDateTime.now(), true);
+        MovieDataModel originalItem = buildMovie(123, "test title", "test description", LocalDateTime.now(), false);
+        MovieDataModel itemToSave = buildMovie(123, "new title", "new description", LocalDateTime.now(), true);
 
         when(repository.findById(originalItem.getId())).thenReturn(Optional.of(originalItem));
         when(repository.save(itemToSave)).thenReturn(itemToSave);
 
-        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.put("/todo/" + itemToSave.getId())
+        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.put("/movies/" + itemToSave.getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON)
                 .content(this.jsonMapper.writeValueAsString(itemToSave));
@@ -244,15 +244,15 @@ public class ToDoControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$", notNullValue()))
                 .andExpect(jsonPath("$.id", is(itemToSave.getId())))
-                .andExpect(jsonPath("$.name", is(itemToSave.getName())))
+                .andExpect(jsonPath("$.title", is(itemToSave.getTitle())))
                 .andExpect(jsonPath("$.description", is(itemToSave.getDescription())))
-                .andExpect(jsonPath("$.dueDate", is(formatDateTimeForComparison(itemToSave.getDueDate()))))
-                .andExpect(jsonPath("$.completed", is(itemToSave.getCompleted())));
+                .andExpect(jsonPath("$.releaseDate", is(formatDateTimeForComparison(itemToSave.getReleaseDate()))))
+                .andExpect(jsonPath("$.availableOnDvd", is(itemToSave.isAvailableOnDvd())));
     }
 
     @Test
     public void update_PassInvalidItem_ExpectFailure() throws Exception {
-        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.put("/todo/123")
+        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.put("/movies/123")
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON)
                 .content("INVALID");
@@ -263,13 +263,13 @@ public class ToDoControllerTest {
 
     @Test
     public void update_InvalidId_ExpectFailure() throws Exception {
-        ToDoItem originalItem = buildToDoItem(123, "test item", "test description", LocalDateTime.now(), false);
-        ToDoItem itemToSave = buildToDoItem(456, "new item", "new description", LocalDateTime.now(), true);
+        MovieDataModel originalItem = buildMovie(123, "test title", "test description", LocalDateTime.now(), false);
+        MovieDataModel itemToSave = buildMovie(456, "new title", "new description", LocalDateTime.now(), true);
 
         when(repository.findById(originalItem.getId())).thenReturn(Optional.of(originalItem));
         when(repository.save(itemToSave)).thenReturn(itemToSave);
 
-        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.put("/todo/" + itemToSave.getId())
+        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.put("/movies/" + itemToSave.getId())
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON)
                 .content(this.jsonMapper.writeValueAsString(itemToSave));
@@ -277,20 +277,20 @@ public class ToDoControllerTest {
         this.mockMvc.perform(mockRequest)
                 .andExpect(status().isNotFound())
                 .andExpect(result ->
-                        assertTrue(result.getResolvedException() instanceof ToDoItemNotFoundException))
+                        assertTrue(result.getResolvedException() instanceof MovieNotFoundException))
                 .andExpect(result ->
-                        assertEquals("Could not find todo item " + itemToSave.getId(), result.getResolvedException().getMessage()));
+                        assertEquals("Could not find movie " + itemToSave.getId(), result.getResolvedException().getMessage()));
     }
 
     @Test
     public void updateAsXml_SaveValidItem_ExpectSuccess() throws Exception {
-        ToDoItem originalItem = buildToDoItem(123, "test item", "test description", LocalDateTime.now(), false);
-        ToDoItem itemToSave = buildToDoItem(123, "new item", "new description", LocalDateTime.now(), true);
+        MovieDataModel originalItem = buildMovie(123, "test title", "test description", LocalDateTime.now(), false);
+        MovieDataModel itemToSave = buildMovie(123, "new title", "new description", LocalDateTime.now(), true);
 
         when(repository.findById(originalItem.getId())).thenReturn(Optional.of(originalItem));
         when(repository.save(itemToSave)).thenReturn(itemToSave);
 
-        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.put("/todo/" + itemToSave.getId())
+        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.put("/movies/" + itemToSave.getId())
                 .contentType(MediaType.APPLICATION_XML)
                 .accept(MediaType.APPLICATION_XML)
                 .content(this.xmlMapper.writeValueAsString(itemToSave));
@@ -299,11 +299,11 @@ public class ToDoControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_XML))
                 .andExpect(xpath("/*").nodeCount(is(1)))
-                .andExpect(xpath("/ToDoItem[1]/id").string(is("" + itemToSave.getId())))
-                .andExpect(xpath("/ToDoItem[1]/name").string(is(itemToSave.getName())))
-                .andExpect(xpath("/ToDoItem[1]/description").string(is(itemToSave.getDescription())))
-                .andExpect(xpath("/ToDoItem[1]/dueDate").string(is(formatDateTimeForComparison(itemToSave.getDueDate()))))
-                .andExpect(xpath("/ToDoItem[1]/completed").string(is(itemToSave.getCompleted().toString())));
+                .andExpect(xpath("/Movie[1]/id").string(is("" + itemToSave.getId())))
+                .andExpect(xpath("/Movie[1]/title").string(is(itemToSave.getTitle())))
+                .andExpect(xpath("/Movie[1]/description").string(is(itemToSave.getDescription())))
+                .andExpect(xpath("/Movie[1]/releaseDate").string(is(formatDateTimeForComparison(itemToSave.getReleaseDate()))))
+                .andExpect(xpath("/Movie[1]/availableOnDvd").string(is(itemToSave.isAvailableOnDvd().toString())));
     }
 
     //******************************************************************
@@ -312,11 +312,11 @@ public class ToDoControllerTest {
 
     @Test
     public void delete_DeleteValidItem_ExpectSuccess() throws Exception {
-        ToDoItem itemToDelete = buildToDoItem(123, "test item", "test description", LocalDateTime.now(), false);
+        MovieDataModel movieToDelete = buildMovie(123, "test title", "test description", LocalDateTime.now(), false);
 
-        when(repository.findById(itemToDelete.getId())).thenReturn(Optional.of(itemToDelete));
+        when(repository.findById(movieToDelete.getId())).thenReturn(Optional.of(movieToDelete));
 
-        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.delete("/todo/" + itemToDelete.getId())
+        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.delete("/movies/" + movieToDelete.getId())
                 .contentType(MediaType.APPLICATION_JSON);
 
         this.mockMvc.perform(mockRequest)
@@ -325,29 +325,29 @@ public class ToDoControllerTest {
 
     @Test
     public void delete_InvalidId_ExpectFailure() throws Exception {
-        ToDoItem itemToDelete = buildToDoItem(123, "test item", "test description", LocalDateTime.now(), false);
+        MovieDataModel movieToDelete = buildMovie(123, "test title", "test description", LocalDateTime.now(), false);
         int invalidId = 456;
 
-        when(repository.findById(itemToDelete.getId())).thenReturn(Optional.of(itemToDelete));
+        when(repository.findById(movieToDelete.getId())).thenReturn(Optional.of(movieToDelete));
 
-        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.delete("/todo/" + invalidId)
+        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.delete("/movies/" + invalidId)
                 .contentType(MediaType.APPLICATION_JSON);
 
         this.mockMvc.perform(mockRequest)
                 .andExpect(status().isNotFound())
                 .andExpect(result ->
-                        assertTrue(result.getResolvedException() instanceof ToDoItemNotFoundException))
+                        assertTrue(result.getResolvedException() instanceof MovieNotFoundException))
                 .andExpect(result ->
-                        assertEquals("Could not find todo item " + invalidId, result.getResolvedException().getMessage()));
+                        assertEquals("Could not find movie " + invalidId, result.getResolvedException().getMessage()));
     }
 
     @Test
     public void deleteAsXml_DeleteValidItem_ExpectSuccess() throws Exception {
-        ToDoItem itemToDelete = buildToDoItem(123, "test item", "test description", LocalDateTime.now(), false);
+        MovieDataModel movieToDelete = buildMovie(123, "test title", "test description", LocalDateTime.now(), false);
 
-        when(repository.findById(itemToDelete.getId())).thenReturn(Optional.of(itemToDelete));
+        when(repository.findById(movieToDelete.getId())).thenReturn(Optional.of(movieToDelete));
 
-        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.delete("/todo/" + itemToDelete.getId())
+        MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.delete("/movies/" + movieToDelete.getId())
                 .contentType(MediaType.APPLICATION_XML);
 
         this.mockMvc.perform(mockRequest)
@@ -359,21 +359,22 @@ public class ToDoControllerTest {
     //******************************************************************
 
     /**
-     * Build a toDoItem to use in these unit tests
+     * Build a movie to use in these unit tests
      * @param id id value to set
-     * @param name name of the item
-     * @param description description of the item
-     * @param completed completed flag
-     * @return new ToDoItem populated with the values
+     * @param title title of the movie
+     * @param description description of the movie
+     * @param releaseDate release date of movie
+     * @param availableOnDvd available on Dvd flag
+     * @return new Movie object populated with the values
      */
-    private ToDoItem buildToDoItem(int id, String name, String description, LocalDateTime dueDateTime, Boolean completed) {
-        return new ToDoItem() {
+    private MovieDataModel buildMovie(int id, String title, String description, LocalDateTime releaseDate, Boolean availableOnDvd) {
+        return new MovieDataModel() {
             {
                 setId(id);
-                setName(name);
+                setTitle(title);
                 setDescription(description);
-                setDueDate(dueDateTime);
-                setCompleted(completed);
+                setReleaseDate(releaseDate);
+                setAvailableOnDvd(availableOnDvd);
             }
         };
     }
